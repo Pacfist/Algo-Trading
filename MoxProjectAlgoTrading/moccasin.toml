@@ -2,24 +2,17 @@
 src = "src"
 out = "out"
 dot_env = ".env"
+save_abi_path = "abis"
 
-[networks.pyevm]
-is_zksync = false
+[networks.contracts]
+weth = { abi = "abis/weth.json" }
 
-[networks.anvil]
-url = "http://127.0.0.1:8545"
-prompt_live = false
-save_to_db = false
-chain_id = 31337
+[networks.eth-forked]
+fork = true
+url = "$MAINNET_RPC_URL"
+default_account_name = "matvey1"
+unsafe_password_file = "$MATVEY1_PASSWORD_FILE"
 
-[networks.sepolia]
-url = "https://ethereum-sepolia-rpc.publicnode.com"
-chain_id = 11155111
-
-[networks.zksync-sepolia]
-url = "https://sepolia.era.zksync.dev"
-chain_id = 300
-is_zksync = true
-prompt_live = true
-
-# You can view all configuration options at https://cyfrin.github.io/moccasin/all_moccasin_toml_parameters.html
+[networks.eth-forked.contracts]
+usdc = { address = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" }
+weth = { address = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2" }

@@ -6,6 +6,7 @@ save_abi_path = "abis"
 
 [networks.contracts]
 weth = { abi = "abis/weth.json" }
+usdc = { abi = "abis/usdc.json" }
 
 [networks.eth-forked]
 fork = true

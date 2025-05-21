@@ -37,5 +37,9 @@ def setup_script() -> Tuple[ABIContract, ABIContract,ABIContract,ABIContract]:
         _add_eth_balance()
         _add_token_balance(usdc,weth)
 
+    aavev3_pool_addresses_provider = active_netwrork.manifest_named("aavev3_pool_addresses_provider")
+    pool_address = aavev3_pool_addresses_provider.getPool()
+    print(pool_address)
+
 def moccasin_main():
     setup_script()

@@ -11,6 +11,8 @@ usdc = { abi = "abis/usdc.json" }
 aavev3_pool_addresses_provider = { abi = "abis/aavev3_pool_addresses_provider.json" }
 pool = { abi = "abis/pool.json" }
 aave_protocol_data_provider = { abi = "abis/aave_protocol_data_provider.json" }
+eth_usd = { abi = "abis/eth_usd.json" }
+usdc_usd = { abi = "abis/usdc_usd.json" }
 
 [networks.eth-forked]
 fork = true
@@ -23,3 +25,5 @@ usdc = { address = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" }
 weth = { address = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2" }
 aavev3_pool_addresses_provider = { address = "0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e" }
 aave_protocol_data_provider = { address = "0x497a1994c46d4f6C864904A9f1fac6328Cb7C8a6" }
+eth_usd = { address = "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419" }
+usdc_usd = { address = "0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6" }

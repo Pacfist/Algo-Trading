@@ -211,7 +211,7 @@ def setup_script() -> Tuple[ABIContract, ABIContract,ABIContract,ABIContract]:
 
                 amount_token = abs(int(tokens_arr_sorted[0]["trade"] * (10 ** tokens_arr_sorted[0]["token"].decimals())))
 
-                amount_token2_min = int(usdc_to_manage * 0.9)
+                amount_token2_min = int(tokens_arr_sorted[1]["trade"]  * 0.9)
 
                 tokens_arr_sorted[0]["token"].approve(uniswap_swap_router.address, amount_token)
 
@@ -248,46 +248,6 @@ def setup_script() -> Tuple[ABIContract, ABIContract,ABIContract,ABIContract]:
                 print(usdc_percent)
                 print(weth_percent)
 
-
-
-
-
-
-                
-
-    #-----Swaping the tokens-----
-
-    #a_weth.approve(pool_contract.address, a_weth.balanceOf(boa.env.eoa))
-    #pool_contract.withdraw(weth.address, a_weth.balanceOf(boa.env.eoa), boa.env.eoa)
-
-    #uniswap_swap_router = active_netwrork.manifest_named("uniswap_swap_router")
-
-    #amount_weth = abs(int(weth_to_manage * (10 ** weth.decimals())))
-    #amount_usdc = usdc_to_manage * (10 ** usdc.decimals())
-    #amount_usdc_min = int(usdc_to_manage * 0.9)
-    # print(amount_weth)
-    # print(amount_usdc)
-    # weth.approve(uniswap_swap_router.address, amount_weth)
-    # print("Let's swap!")
-    # uniswap_swap_router.exactInputSingle(
-    #     (
-    #         weth.address,
-    #         usdc.address,
-    #         3000,
-    #         boa.env.eoa,
-    #         amount_weth,
-    #         amount_usdc_min,
-    #         0
-
-    #     )
-    # )
-
-    
-
-
-
-
-    
 
 def moccasin_main():
     setup_script()

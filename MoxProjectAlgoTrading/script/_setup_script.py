@@ -4,9 +4,14 @@ from moccasin.config import get_active_network
 import boa 
 
 STARTING_ETH_BALANCE = int(1000e18)
-STARTING_WETH_BALANCE = int(1e18)
-STARTING_USDC_BALANCE = int(100e6)
-
+STARTING_WETH_BALANCE = int(0.1e18)
+STARTING_USDC_BALANCE = int(300e6)
+# USDC : 0
+# WETH : 0
+# aUSDC : 829636674
+# aWETH : 726102812839416736
+# 0.298771250738945
+# 0.701228749261055
 def _add_eth_balance():
     boa.env.set_balance(boa.env.eoa, STARTING_ETH_BALANCE)
 
@@ -21,8 +26,8 @@ def _add_token_balance(usdc, weth):
     usdc.mint(our_address, STARTING_USDC_BALANCE)
     print("After deposit:")
     print("ETH:", boa.env.get_balance(boa.env.eoa))
-    print("WETH:", weth.balanceOf(boa.env.eoa))
-    print("USDC:", usdc.balanceOf(boa.env.eoa))
+    print("WETH:", weth.balanceOf(boa.env.eoa) / 10**18)
+    print("USDC:", usdc.balanceOf(boa.env.eoa)/ 10**6)
     print(f"Name: {weth.name()}")
 #Code for depositing the money
 REFFERAL_CODE = 0
@@ -84,11 +89,13 @@ def calculate_rebalancing_trades(
         "usdc": {
             "contract": usdc_data["contract"],
             "trade": usdc_trade_usd / usdc_data["price"],
+            "token": usdc_data["token"], 
             
         },
         "weth": {
             "contract": weth_data["contract"],
             "trade": weth_trade_usd / weth_data["price"],
+            "token": weth_data["token"], 
         },
     }
 
@@ -99,7 +106,8 @@ def setup_script() -> Tuple[ABIContract, ABIContract,ABIContract,ABIContract]:
 
     usdc = active_netwrork.manifest_named("usdc")
     weth = active_netwrork.manifest_named("weth")
-    #Loading balance with temp tokens
+
+    #---------------Loading balance with temp tokens-------------------
     if active_netwrork.is_local_or_forked_network():
         _add_eth_balance()
         _add_token_balance(usdc,weth)
@@ -125,6 +133,7 @@ def setup_script() -> Tuple[ABIContract, ABIContract,ABIContract,ABIContract]:
     print(f"User Account Data \n totalCollateralBase = {totalCollateralBase}, \n totalDebtBase = {totalDebtBase}, \n availableBorrowsBase = {availableBorrowsBase} \n currentLiquidationThreshold = {currentLiquidationThreshold} \n ltv = {ltv} \n healthFactor = {healthFactor}")
     #Getting the a_tokens
     aave_protocol_data_provider = active_netwrork.manifest_named("aave_protocol_data_provider")
+    print("Getting all a-tokens!")
     a_tokens = aave_protocol_data_provider.getAllATokens()
     #print(a_tokens)
     #Getting the weth and usdc a_token
@@ -172,72 +181,108 @@ def setup_script() -> Tuple[ABIContract, ABIContract,ABIContract,ABIContract]:
 
     print(need_rebalancing)
     print(pool_contract)
-    print_token_balances(usdc, weth,a_usdc,a_weth)
 
     if(need_rebalancing):
-        usdc_data = {"balance" : a_usdc_balance_norm, "price": usdc_price, "contract" : a_usdc}
-        weth_data = {"balance" : a_weth_balance_norm, "price": weth_price, "contract" : a_weth}
+        print("We need to rebalance the portfolio!")
+        usdc_data = {"balance" : a_usdc_balance_norm, "price": usdc_price, "contract" : a_usdc, "token": usdc}
+        weth_data = {"balance" : a_weth_balance_norm, "price": weth_price, "contract" : a_weth, "token": weth}
         target_allocations = {"usdc": 0.3, "weth": 0.7}
 
-    trades = calculate_rebalancing_trades(usdc_data, weth_data, target_allocations)
+        trades = calculate_rebalancing_trades(usdc_data, weth_data, target_allocations)
 
-    weth_to_manage = trades["weth"]["trade"]
-    usdc_to_manage = trades["usdc"]["trade"]
+        weth_to_manage = trades["weth"]["trade"]
+        usdc_to_manage = trades["usdc"]["trade"]
+        print("The tokens to manage: ")
+        print(weth_to_manage)
+        print(usdc_to_manage)
 
-    print(weth_to_manage)
-    print(usdc_to_manage)
+        tokens_arr = [trades["weth"], trades["usdc"]]
+        tokens_arr_sorted = sorted(tokens_arr, key=lambda x: x["trade"])
+        
+        if(True):
+            if(tokens_arr_sorted[0]["trade"] < 0):
+                print(f"The first item is {tokens_arr_sorted[0]}")
+                print("Approvi contract!")
+                tokens_arr_sorted[0]["contract"].approve(pool_contract.address,tokens_arr_sorted[0]["contract"].balanceOf(boa.env.eoa))
+                print(f"Withdraw the money!")
+                pool_contract.withdraw(tokens_arr_sorted[0]["token"].address, tokens_arr_sorted[0]["contract"].balanceOf(boa.env.eoa), boa.env.eoa)
 
-    tokens_arr = [trades["weth"], trades["usdc"]]
-    tokens_arr_sorted = sorted(tokens_arr, key=lambda x: x["trade"])
-    
-    print(tokens_arr)
-    print(tokens_arr_sorted)
+                uniswap_swap_router = active_netwrork.manifest_named("uniswap_swap_router")
+
+                amount_token = abs(int(tokens_arr_sorted[0]["trade"] * (10 ** tokens_arr_sorted[0]["token"].decimals())))
+
+                amount_token2_min = int(usdc_to_manage * 0.9)
+
+                tokens_arr_sorted[0]["token"].approve(uniswap_swap_router.address, amount_token)
+
+                print(f"Let's swap! \nWe swap {tokens_arr_sorted[0]["token"]} to {usdc} for amount {amount_token}!")
+                uniswap_swap_router.exactInputSingle(
+                    (
+                        tokens_arr_sorted[0]["token"].address,
+                        tokens_arr_sorted[1]["token"].address,
+                        3000,
+                        boa.env.eoa,
+                        amount_token,
+                        amount_token2_min,
+                        0
+
+                    )
+                )
+                print("Depositing the money back!")
+                deposit(pool_contract, usdc, usdc.balanceOf(boa.env.eoa))
+                deposit(pool_contract, weth, weth.balanceOf(boa.env.eoa))
+                print_token_balances(usdc, weth,a_usdc,a_weth)
+
+                a_usdc_balance = a_usdc.balanceOf(boa.env.eoa)
+                a_weth_balance = a_weth.balanceOf(boa.env.eoa)
+
+                a_usdc_balance_norm = a_usdc_balance / 1000000
+                a_weth_balance_norm = a_weth_balance / 1000000000000000000
+
+                usdc_val = a_usdc_balance_norm * usdc_price
+                weth_val = a_weth_balance_norm * weth_price
+
+                usdc_percent = usdc_val / (usdc_val + weth_val)
+                weth_percent = weth_val / (usdc_val + weth_val)
+
+                print(usdc_percent)
+                print(weth_percent)
+
+
+
+
+
+
+                
+
     #-----Swaping the tokens-----
 
-    a_weth.approve(pool_contract.address, a_weth.balanceOf(boa.env.eoa))
-    pool_contract.withdraw(weth.address, a_weth.balanceOf(boa.env.eoa), boa.env.eoa)
+    #a_weth.approve(pool_contract.address, a_weth.balanceOf(boa.env.eoa))
+    #pool_contract.withdraw(weth.address, a_weth.balanceOf(boa.env.eoa), boa.env.eoa)
 
-    uniswap_swap_router = active_netwrork.manifest_named("uniswap_swap_router")
+    #uniswap_swap_router = active_netwrork.manifest_named("uniswap_swap_router")
 
-    amount_weth = abs(int(weth_to_manage * (10 ** weth.decimals())))
-    amount_usdc = usdc_to_manage * (10 ** usdc.decimals())
-    amount_usdc_min = int(usdc_to_manage * 0.9)
-    print(amount_weth)
-    print(amount_usdc)
-    weth.approve(uniswap_swap_router.address, amount_weth)
-    print("Let's swap!")
-    uniswap_swap_router.exactInputSingle(
-        (
-            weth.address,
-            usdc.address,
-            3000,
-            boa.env.eoa,
-            amount_weth,
-            amount_usdc_min,
-            0
+    #amount_weth = abs(int(weth_to_manage * (10 ** weth.decimals())))
+    #amount_usdc = usdc_to_manage * (10 ** usdc.decimals())
+    #amount_usdc_min = int(usdc_to_manage * 0.9)
+    # print(amount_weth)
+    # print(amount_usdc)
+    # weth.approve(uniswap_swap_router.address, amount_weth)
+    # print("Let's swap!")
+    # uniswap_swap_router.exactInputSingle(
+    #     (
+    #         weth.address,
+    #         usdc.address,
+    #         3000,
+    #         boa.env.eoa,
+    #         amount_weth,
+    #         amount_usdc_min,
+    #         0
 
-        )
-    )
-    print_token_balances(usdc, weth,a_usdc,a_weth)
+    #     )
+    # )
 
-    deposit(pool_contract, usdc, usdc.balanceOf(boa.env.eoa))
-    deposit(pool_contract, weth, weth.balanceOf(boa.env.eoa))
-    print_token_balances(usdc, weth,a_usdc,a_weth)
-
-    a_usdc_balance = a_usdc.balanceOf(boa.env.eoa)
-    a_weth_balance = a_weth.balanceOf(boa.env.eoa)
-
-    a_usdc_balance_norm = a_usdc_balance / 1000000
-    a_weth_balance_norm = a_weth_balance / 1000000000000000000
-
-    usdc_val = a_usdc_balance_norm * usdc_price
-    weth_val = a_weth_balance_norm * weth_price
-
-    usdc_percent = usdc_val / (usdc_val + weth_val)
-    weth_percent = weth_val / (usdc_val + weth_val)
-
-    print(usdc_percent)
-    print(weth_percent)
+    
 
 
 

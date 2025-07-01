@@ -2,7 +2,7 @@
 
 This project demonstrates a basic DeFi strategy: depositing WETH and USDC into Aave, evaluating portfolio allocation, and automatically rebalancing using Uniswap if the allocations drift beyond a defined threshold.
 
-Built on top of [Moccasin](https://github.com/boa-dev/moccasin), [boa](https://github.com/boa-dev/boa), and forked Ethereum networks (via Anvil or similar).
+Built on top of Moccasin, [boa](https://github.com/boa-dev/boa), and forked Ethereum networks (via Anvil or similar).
 
 ---
 
